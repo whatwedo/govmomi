@@ -125,6 +125,9 @@ func (flag *NetworkFlag) Device() (types.BaseVirtualDevice, error) {
 		card := device.(types.BaseVirtualEthernetCard).GetVirtualEthernetCard()
 		card.AddressType = string(types.VirtualEthernetCardMacTypeManual)
 		card.MacAddress = flag.address
+	} else {
+		card := device.(types.BaseVirtualEthernetCard).GetVirtualEthernetCard()
+		card.AddressType = string(types.VirtualEthernetCardMacTypeGenerated)
 	}
 
 	return device, nil
