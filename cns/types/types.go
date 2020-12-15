@@ -338,9 +338,19 @@ func init() {
 	types.Add("CnsVolumeOperationBatchResult", reflect.TypeOf((*CnsVolumeOperationBatchResult)(nil)).Elem())
 }
 
+type CnsPlacementResult struct {
+	Datastore       types.ManagedObjectReference  `xml:"datastore,omitempty"`
+	PlacementFaults []*types.LocalizedMethodFault `xml:"placementFaults,omitempty"`
+}
+
+func init() {
+	types.Add("CnsPlacementResult", reflect.TypeOf((*CnsPlacementResult)(nil)).Elem())
+}
+
 type CnsVolumeCreateResult struct {
 	CnsVolumeOperationResult
-	Name string `xml:"name,omitempty"`
+	Name             string               `xml:"name,omitempty"`
+	PlacementResults []CnsPlacementResult `xml:"placementResults,omitempty"`
 }
 
 func init() {
@@ -583,4 +593,47 @@ type CnsAlreadyRegisteredFault struct {
 
 func init() {
 	types.Add("CnsAlreadyRegisteredFault", reflect.TypeOf((*CnsAlreadyRegisteredFault)(nil)).Elem())
+}
+
+type CnsConfigureVolumeACLs CnsConfigureVolumeACLsRequestType
+
+func init() {
+	types.Add("vsan:CnsConfigureVolumeACLs", reflect.TypeOf((*CnsConfigureVolumeACLs)(nil)).Elem())
+}
+
+type CnsConfigureVolumeACLsRequestType struct {
+	This           types.ManagedObjectReference `xml:"_this"`
+	ACLConfigSpecs []CnsVolumeACLConfigureSpec  `xml:"ACLConfigSpecs"`
+}
+
+func init() {
+	types.Add("vsan:CnsConfigureVolumeACLsRequestType", reflect.TypeOf((*CnsConfigureVolumeACLsRequestType)(nil)).Elem())
+}
+
+type CnsConfigureVolumeACLsResponse struct {
+	Returnval types.ManagedObjectReference `xml:"returnval"`
+}
+
+type CnsVolumeACLConfigureSpec struct {
+	types.DynamicData
+
+	VolumeId              CnsVolumeId                `xml:"volumeId"`
+	AccessControlSpecList []BaseCnsAccessControlSpec `xml:"accessControlSpecList,typeattr"`
+}
+
+func init() {
+	types.Add("vsan:CnsVolumeACLConfigureSpec", reflect.TypeOf((*CnsVolumeACLConfigureSpec)(nil)).Elem())
+}
+func (b *CnsAccessControlSpec) GetCnsAccessControlSpec() *CnsAccessControlSpec { return b }
+
+type BaseCnsAccessControlSpec interface {
+	GetCnsAccessControlSpec() *CnsAccessControlSpec
+}
+
+type CnsAccessControlSpec struct {
+	types.DynamicData
+}
+
+func init() {
+	types.Add("vsan:CnsAccessControlSpec", reflect.TypeOf((*CnsAccessControlSpec)(nil)).Elem())
 }
