@@ -22,11 +22,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/vmware/govmomi"
@@ -223,42 +225,43 @@ func (*Model) fmtName(prefix string, num int) string {
 
 // kinds maps managed object types to their vcsim wrapper types
 var kinds = map[string]reflect.Type{
-	"AuthorizationManager":           reflect.TypeOf((*AuthorizationManager)(nil)).Elem(),
-	"ClusterComputeResource":         reflect.TypeOf((*ClusterComputeResource)(nil)).Elem(),
-	"CustomFieldsManager":            reflect.TypeOf((*CustomFieldsManager)(nil)).Elem(),
-	"CustomizationSpecManager":       reflect.TypeOf((*CustomizationSpecManager)(nil)).Elem(),
-	"Datacenter":                     reflect.TypeOf((*Datacenter)(nil)).Elem(),
-	"Datastore":                      reflect.TypeOf((*Datastore)(nil)).Elem(),
-	"DistributedVirtualPortgroup":    reflect.TypeOf((*DistributedVirtualPortgroup)(nil)).Elem(),
-	"DistributedVirtualSwitch":       reflect.TypeOf((*DistributedVirtualSwitch)(nil)).Elem(),
-	"EnvironmentBrowser":             reflect.TypeOf((*EnvironmentBrowser)(nil)).Elem(),
-	"EventManager":                   reflect.TypeOf((*EventManager)(nil)).Elem(),
-	"FileManager":                    reflect.TypeOf((*FileManager)(nil)).Elem(),
-	"Folder":                         reflect.TypeOf((*Folder)(nil)).Elem(),
-	"GuestOperationsManager":         reflect.TypeOf((*GuestOperationsManager)(nil)).Elem(),
-	"HostDatastoreBrowser":           reflect.TypeOf((*HostDatastoreBrowser)(nil)).Elem(),
-	"HostLocalAccountManager":        reflect.TypeOf((*HostLocalAccountManager)(nil)).Elem(),
-	"HostNetworkSystem":              reflect.TypeOf((*HostNetworkSystem)(nil)).Elem(),
-	"HostSystem":                     reflect.TypeOf((*HostSystem)(nil)).Elem(),
-	"IpPoolManager":                  reflect.TypeOf((*IpPoolManager)(nil)).Elem(),
-	"LicenseManager":                 reflect.TypeOf((*LicenseManager)(nil)).Elem(),
-	"OptionManager":                  reflect.TypeOf((*OptionManager)(nil)).Elem(),
-	"OvfManager":                     reflect.TypeOf((*OvfManager)(nil)).Elem(),
-	"PerformanceManager":             reflect.TypeOf((*PerformanceManager)(nil)).Elem(),
-	"PropertyCollector":              reflect.TypeOf((*PropertyCollector)(nil)).Elem(),
-	"ResourcePool":                   reflect.TypeOf((*ResourcePool)(nil)).Elem(),
-	"SearchIndex":                    reflect.TypeOf((*SearchIndex)(nil)).Elem(),
-	"SessionManager":                 reflect.TypeOf((*SessionManager)(nil)).Elem(),
-	"StoragePod":                     reflect.TypeOf((*StoragePod)(nil)).Elem(),
-	"StorageResourceManager":         reflect.TypeOf((*StorageResourceManager)(nil)).Elem(),
-	"TaskManager":                    reflect.TypeOf((*TaskManager)(nil)).Elem(),
-	"UserDirectory":                  reflect.TypeOf((*UserDirectory)(nil)).Elem(),
-	"VcenterVStorageObjectManager":   reflect.TypeOf((*VcenterVStorageObjectManager)(nil)).Elem(),
-	"ViewManager":                    reflect.TypeOf((*ViewManager)(nil)).Elem(),
-	"VirtualApp":                     reflect.TypeOf((*VirtualApp)(nil)).Elem(),
-	"VirtualDiskManager":             reflect.TypeOf((*VirtualDiskManager)(nil)).Elem(),
-	"VirtualMachine":                 reflect.TypeOf((*VirtualMachine)(nil)).Elem(),
-	"VmwareDistributedVirtualSwitch": reflect.TypeOf((*DistributedVirtualSwitch)(nil)).Elem(),
+	"AuthorizationManager":            reflect.TypeOf((*AuthorizationManager)(nil)).Elem(),
+	"ClusterComputeResource":          reflect.TypeOf((*ClusterComputeResource)(nil)).Elem(),
+	"CustomFieldsManager":             reflect.TypeOf((*CustomFieldsManager)(nil)).Elem(),
+	"CustomizationSpecManager":        reflect.TypeOf((*CustomizationSpecManager)(nil)).Elem(),
+	"Datacenter":                      reflect.TypeOf((*Datacenter)(nil)).Elem(),
+	"Datastore":                       reflect.TypeOf((*Datastore)(nil)).Elem(),
+	"DistributedVirtualPortgroup":     reflect.TypeOf((*DistributedVirtualPortgroup)(nil)).Elem(),
+	"DistributedVirtualSwitch":        reflect.TypeOf((*DistributedVirtualSwitch)(nil)).Elem(),
+	"DistributedVirtualSwitchManager": reflect.TypeOf((*DistributedVirtualSwitchManager)(nil)).Elem(),
+	"EnvironmentBrowser":              reflect.TypeOf((*EnvironmentBrowser)(nil)).Elem(),
+	"EventManager":                    reflect.TypeOf((*EventManager)(nil)).Elem(),
+	"FileManager":                     reflect.TypeOf((*FileManager)(nil)).Elem(),
+	"Folder":                          reflect.TypeOf((*Folder)(nil)).Elem(),
+	"GuestOperationsManager":          reflect.TypeOf((*GuestOperationsManager)(nil)).Elem(),
+	"HostDatastoreBrowser":            reflect.TypeOf((*HostDatastoreBrowser)(nil)).Elem(),
+	"HostLocalAccountManager":         reflect.TypeOf((*HostLocalAccountManager)(nil)).Elem(),
+	"HostNetworkSystem":               reflect.TypeOf((*HostNetworkSystem)(nil)).Elem(),
+	"HostSystem":                      reflect.TypeOf((*HostSystem)(nil)).Elem(),
+	"IpPoolManager":                   reflect.TypeOf((*IpPoolManager)(nil)).Elem(),
+	"LicenseManager":                  reflect.TypeOf((*LicenseManager)(nil)).Elem(),
+	"OptionManager":                   reflect.TypeOf((*OptionManager)(nil)).Elem(),
+	"OvfManager":                      reflect.TypeOf((*OvfManager)(nil)).Elem(),
+	"PerformanceManager":              reflect.TypeOf((*PerformanceManager)(nil)).Elem(),
+	"PropertyCollector":               reflect.TypeOf((*PropertyCollector)(nil)).Elem(),
+	"ResourcePool":                    reflect.TypeOf((*ResourcePool)(nil)).Elem(),
+	"SearchIndex":                     reflect.TypeOf((*SearchIndex)(nil)).Elem(),
+	"SessionManager":                  reflect.TypeOf((*SessionManager)(nil)).Elem(),
+	"StoragePod":                      reflect.TypeOf((*StoragePod)(nil)).Elem(),
+	"StorageResourceManager":          reflect.TypeOf((*StorageResourceManager)(nil)).Elem(),
+	"TaskManager":                     reflect.TypeOf((*TaskManager)(nil)).Elem(),
+	"UserDirectory":                   reflect.TypeOf((*UserDirectory)(nil)).Elem(),
+	"VcenterVStorageObjectManager":    reflect.TypeOf((*VcenterVStorageObjectManager)(nil)).Elem(),
+	"ViewManager":                     reflect.TypeOf((*ViewManager)(nil)).Elem(),
+	"VirtualApp":                      reflect.TypeOf((*VirtualApp)(nil)).Elem(),
+	"VirtualDiskManager":              reflect.TypeOf((*VirtualDiskManager)(nil)).Elem(),
+	"VirtualMachine":                  reflect.TypeOf((*VirtualMachine)(nil)).Elem(),
+	"VmwareDistributedVirtualSwitch":  reflect.TypeOf((*DistributedVirtualSwitch)(nil)).Elem(),
 }
 
 func loadObject(content types.ObjectContent) (mo.Reference, error) {
@@ -306,7 +309,7 @@ func (m *Model) resolveReferences(ctx *Context) error {
 	if !ok {
 		// Need to have at least 1 Datacenter
 		root := Map.Get(Map.content().RootFolder).(*Folder)
-		ref := root.CreateDatacenter(internalContext, &types.CreateDatacenter{
+		ref := root.CreateDatacenter(ctx, &types.CreateDatacenter{
 			This: root.Self,
 			Name: "DC0",
 		}).(*methods.CreateDatacenterBody).Res.Returnval
@@ -380,9 +383,27 @@ func (m *Model) loadMethod(obj mo.Reference, dir string) error {
 	return nil
 }
 
+// When simulator code needs to call other simulator code, it typically passes whatever
+// context is associated with the request it's servicing.
+// Model code isn't servicing a request, but still needs a context, so we spoof
+// one for the purposes of calling simulator code.
+// Test code also tends to do this.
+func SpoofContext() *Context {
+	return &Context{
+		Context: context.Background(),
+		Session: &Session{
+			UserSession: types.UserSession{
+				Key: uuid.New().String(),
+			},
+			Registry: NewRegistry(),
+		},
+		Map: Map,
+	}
+}
+
 // Load Model from the given directory, as created by the 'govc object.save' command.
 func (m *Model) Load(dir string) error {
-	ctx := internalContext
+	ctx := SpoofContext()
 	var s *ServiceInstance
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -414,7 +435,7 @@ func (m *Model) Load(dir string) error {
 		}
 
 		if s == nil {
-			s = NewServiceInstance(m.ServiceContent, m.RootFolder)
+			s = NewServiceInstance(ctx, m.ServiceContent, m.RootFolder)
 		}
 
 		obj, err := loadObject(content)
@@ -442,8 +463,8 @@ func (m *Model) Load(dir string) error {
 
 // Create populates the Model with the given ModelConfig
 func (m *Model) Create() error {
-	ctx := internalContext
-	m.Service = New(NewServiceInstance(m.ServiceContent, m.RootFolder))
+	ctx := SpoofContext()
+	m.Service = New(NewServiceInstance(ctx, m.ServiceContent, m.RootFolder))
 
 	client := m.Service.client
 	root := object.NewRootFolder(client)
@@ -486,7 +507,8 @@ func (m *Model) Create() error {
 				}},
 			}
 
-			_, _ = dvs.Reconfigure(ctx, config)
+			task, _ = dvs.Reconfigure(ctx, config)
+			_, _ = task.WaitForResult(context.Background(), nil)
 		}
 
 		return host, nil
@@ -540,7 +562,8 @@ func (m *Model) Create() error {
 				vm := object.NewVirtualMachine(client, info.Result.(types.ManagedObjectReference))
 
 				if m.Autostart {
-					_, _ = vm.PowerOn(ctx)
+					task, _ = vm.PowerOn(ctx)
+					_, _ = task.WaitForResult(ctx, nil)
 				}
 			}
 
@@ -618,8 +641,12 @@ func (m *Model) Create() error {
 
 		for npg := 0; npg < m.Portgroup; npg++ {
 			name := m.fmtName(dcName+"_DVPG", npg)
+			spec := types.DVPortgroupConfigSpec{
+				Name: name,
+				Type: string(types.DistributedVirtualPortgroupPortgroupTypeEarlyBinding),
+			}
 
-			task, err := dvs.AddPortgroup(ctx, []types.DVPortgroupConfigSpec{{Name: name}})
+			task, err := dvs.AddPortgroup(ctx, []types.DVPortgroupConfigSpec{spec})
 			if err != nil {
 				return err
 			}
@@ -642,6 +669,7 @@ func (m *Model) Create() error {
 			spec := types.DVPortgroupConfigSpec{
 				Name:              name,
 				LogicalSwitchUuid: uuid.New().String(),
+				Type:              string(types.DistributedVirtualPortgroupPortgroupTypeEarlyBinding),
 			}
 
 			task, err := dvs.AddPortgroup(ctx, []types.DVPortgroupConfigSpec{spec})
@@ -659,7 +687,7 @@ func (m *Model) Create() error {
 		for i := 0; i < m.OpaqueNetwork; i++ {
 			var summary types.OpaqueNetworkSummary
 			summary.Name = m.fmtName(dcName+"_NSX", i)
-			err := networkFolder.AddOpaqueNetwork(summary)
+			err := networkFolder.AddOpaqueNetwork(ctx, summary)
 			if err != nil {
 				return err
 			}
@@ -805,11 +833,13 @@ func (m *Model) createLocalDatastore(dc string, name string, hosts []*object.Hos
 // Remove cleans up items created by the Model, such as local datastore directories
 func (m *Model) Remove() {
 	// Remove associated vm containers, if any
+	Map.m.Lock()
 	for _, obj := range Map.objects {
 		if vm, ok := obj.(*VirtualMachine); ok {
 			vm.run.remove(vm)
 		}
 	}
+	Map.m.Unlock()
 
 	for _, dir := range m.dirs {
 		_ = os.RemoveAll(dir)
@@ -867,4 +897,22 @@ func Test(f func(context.Context, *vim25.Client), model ...*Model) {
 		f(ctx, c)
 		return nil
 	}, model...)
+}
+
+// delay sleeps according to DelayConfig. If no delay specified, returns immediately.
+func (dc *DelayConfig) delay(method string) {
+	d := 0
+	if dc.Delay > 0 {
+		d = dc.Delay
+	}
+	if md, ok := dc.MethodDelay[method]; ok {
+		d += md
+	}
+	if dc.DelayJitter > 0 {
+		d += int(rand.NormFloat64() * dc.DelayJitter * float64(d))
+	}
+	if d > 0 {
+		//fmt.Printf("Delaying method %s %d ms\n", method, d)
+		time.Sleep(time.Duration(d) * time.Millisecond)
+	}
 }

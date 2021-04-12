@@ -12,6 +12,24 @@ load test_helper
   ruby ./vcsim_test.rb "$(govc env -x GOVC_URL_PORT)"
 }
 
+@test "vcsim powercli" {
+  require_docker
+
+  vcsim_env -l 0.0.0.0:0
+
+  server=$(govc env -x GOVC_URL_HOST)
+  port=$(govc env -x GOVC_URL_PORT)
+
+  docker run --rm projects.registry.vmware.com/pez/powerclicore@sha256:09b29f69c0653f871f6d569f7c4c03c952909f68a27e9792ef2f7c8653235668 /usr/bin/pwsh -f - <<EOF
+Set-PowerCLIConfiguration -InvalidCertificateAction Ignore -confirm:\$false | Out-Null
+Connect-VIServer -Server $server -Port $port -User user -Password pass
+
+Get-VM
+Get-VIEvent
+Get-VirtualNetwork
+EOF
+}
+
 @test "vcsim examples" {
   vcsim_env
 
@@ -39,6 +57,10 @@ load test_helper
   [ "$(jq .Cluster <<<"$model")" == "6" ]
   [ "$(jq .Machine <<<"$model")" == "0" ]
   [ "$(jq .Datastore <<<"$model")" == "0" ]
+
+  run govc about
+  assert_success
+  assert_matches "govmomi simulator"
 }
 
 @test "vcsim host placement" {
@@ -211,9 +233,7 @@ docker_name() {
 }
 
 @test "vcsim run container" {
-  if ! docker version ; then
-    skip "docker client not installed"
-  fi
+  require_docker
 
   vcsim_env -autostart=false
 
@@ -281,7 +301,7 @@ docker_name() {
   assert_success
 
   ip=$(govc object.collect -s vm/$vm guest.ipAddress)
-  run docker run --rm curlimages/curl curl -f "http://$ip/vcsim.bats"
+  run curl -f "http://$ip/vcsim.bats"
   assert_success
 
   # test suspend/resume

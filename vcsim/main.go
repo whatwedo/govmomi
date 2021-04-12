@@ -46,6 +46,13 @@ import (
 	_ "github.com/vmware/govmomi/vapi/cluster/simulator"
 	_ "github.com/vmware/govmomi/vapi/namespace/simulator"
 	_ "github.com/vmware/govmomi/vapi/simulator"
+	_ "github.com/vmware/govmomi/vsan/simulator"
+)
+
+var (
+	buildVersion string
+	buildCommit  string
+	buildDate    string
 )
 
 func main() {
@@ -106,7 +113,12 @@ func main() {
 	switch flag.Arg(0) {
 	case "uuidgen": // util-linux not installed on Travis CI
 		fmt.Println(uuid.New().String())
-		return
+		os.Exit(0)
+	case "version":
+		fmt.Printf("Build Version: %s\n", buildVersion)
+		fmt.Printf("Build Commit: %s\n", buildCommit)
+		fmt.Printf("Build Date: %s\n", buildDate)
+		os.Exit(0)
 	}
 
 	if methodDelay != "" {
@@ -155,7 +167,7 @@ func main() {
 	}
 
 	tag := " (govmomi simulator)"
-	model.ServiceContent.About.Name += tag
+	model.ServiceContent.About.FullName += tag
 	model.ServiceContent.About.OsType = runtime.GOOS + "-" + runtime.GOARCH
 
 	esx.HostSystem.Summary.Hardware.Vendor += tag

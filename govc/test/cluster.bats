@@ -207,6 +207,9 @@ _EOF_
   assert_success
   [ "$(govc cluster.override.info -json | jq "$query")" == "true" ]
 
+  run govc cluster.override.change -vm DC0_C0_RP0_VM0 -drs-mode=manual
+  assert_success
+
   # DAS override
   query=".Overrides[] | select(.Name == \"DC0_C0_RP0_VM0\") | .DAS.DasSettings.RestartPriority"
 
@@ -216,16 +219,24 @@ _EOF_
   assert_success
   [ "$(govc cluster.override.info -json | jq -r "$query")" == "high" ]
 
+  # Orchestration override
+  query=".Overrides[] | select(.Name == \"DC0_C0_RP0_VM0\") | .Orchestration.VmReadiness.PostReadyDelay"
+
+  run govc cluster.override.change -vm DC0_C0_RP0_VM0 -ha-additional-delay 60
+  assert_success
+  [ "$(govc cluster.override.info -json | jq -r "$query")" == "60" ]
+
+  query=".Overrides[] | select(.Name == \"DC0_C0_RP0_VM0\") | .Orchestration.VmReadiness.ReadyCondition"
+
+  run govc cluster.override.change -vm DC0_C0_RP0_VM0 -ha-ready-condition poweredOn
+  assert_success
+  [ "$(govc cluster.override.info -json | jq -r "$query")" == "poweredOn" ]
+
+  # remove overrides
   run govc cluster.override.remove -vm DC0_C0_RP0_VM0
   assert_success
   run govc cluster.override.info
   assert_success "" # no overrides == empty output
-
-  run govc cluster.override.change -vm DC0_C0_RP0_VM0 -drs-mode=manual
-  assert_success
-
-  run govc cluster.override.remove -vm DC0_C0_RP0_VM0
-  assert_success
 }
 
 @test "cluster.add" {
@@ -244,4 +255,30 @@ _EOF_
     govc host.info -json '*' | jq -r .HostSystems[].Config.Network.Vnic[].Spec.Ip
     name=$(govc host.info -json -host.ip 10.0.0.42 | jq -r .HostSystems[].Name)
     assert_equal 10.0.0.42 "$name"
+}
+
+@test "cluster.usage" {
+  vcsim_env -host 4
+
+  run govc cluster.usage enoent
+  assert_failure
+
+  run govc cluster.usage DC0_C0
+  assert_success
+
+  memory=$(govc cluster.usage -json DC0_C0 | jq -r .Memory.Summary.Usage)
+  [ "$memory" = "34.3" ]
+}
+
+@test "cluster.stretch" {
+  vcsim_env -host 4
+
+  run govc cluster.stretch -witness DC0_H0 -first-fault-domain-hosts=DC0_C0_H1,DC0_C0_H2 -second-fault-domain-hosts DC0_C0_H2,DC0_C0_H3
+  assert_failure # no cluster specified
+
+  run govc cluster.stretch -witness DC0_H0 -first-fault-domain-hosts=DC0_C0_H1,DC0_C0_H2 DC0_C0
+  assert_failure # no second-fault-domain-hosts specified
+
+  run govc cluster.stretch -witness DC0_H0 -first-fault-domain-hosts=DC0_C0_H1,DC0_C0_H2 -second-fault-domain-hosts DC0_C0_H2,DC0_C0_H3 DC0_C0
+  assert_success
 }
